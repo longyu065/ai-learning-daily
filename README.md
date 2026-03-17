@@ -124,6 +124,7 @@ cd ai-learning-daily
 | 日期 | 文件名 | 天数 | 主题 | 状态 |
 |------|--------|------|------|------|
 | 2026-03-17 | ai_learning_daily_2026-03-17.md | 第1天 | Prompt Engineering + 机器学习基础 | ✅ 已完成 |
+| 2026-03-18 | ai_learning_daily_2026-03-18.md | 第2天 | OpenAI API + 监督/无监督学习 | ✅ 已完成 |
 
 ## 🎯 学习目标
 
