@@ -125,6 +125,11 @@ cd ai-learning-daily
 |------|--------|------|------|------|
 | 2026-03-17 | ai_learning_daily_2026-03-17.md | 第1天 | Prompt Engineering + 机器学习基础 | ✅ 已完成 |
 | 2026-03-18 | ai_learning_daily_2026-03-18.md | 第2天 | OpenAI API + 监督/无监督学习 | ✅ 已完成 |
+| 2026-03-19 | ai_learning_daily_2026-03-19.md | 第3天 | RAG + 常用算法详解 | ✅ 已完成 |
+| 2026-03-20 | ai_learning_daily_2026-03-20.md | 第4天 | Fine-tuning + 评估指标 | ✅ 已完成 |
+| 2026-03-21 | ai_learning_daily_2026-03-21.md | 第5天 | LangChain + 过拟合/欠拟合 | ✅ 已完成 |
+| 2026-03-22 | ai_learning_daily_2026-03-22.md | 第6天 | Agent + 正则化 | ✅ 已完成 |
+| 2026-03-23 | ai_learning_daily_2026-03-23.md | 第7天 | 综合实战 + 面试复习 | ✅ 已完成 |
 
 ## 🎯 学习目标
 
