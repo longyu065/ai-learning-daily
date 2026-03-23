@@ -177,6 +177,29 @@ cd ai-learning-daily
 4. **记录笔记**：GitHub 就是你的笔记
 5. **定期复习**：每周回顾一次
 
+## 🎮 相关项目
+
+### 凡人修仙传游戏项目
+
+| 项目 | 说明 |
+|------|------|
+| **项目名称** | 凡人修仙传（Fanren Xiuxian） |
+| **项目路径** | `F:\dev\fanrenxiuxian` |
+| **技术栈** | Phaser 3 + TypeScript |
+| **游戏类型** | 幸存者类游戏 |
+| **状态** | 开发中 |
+
+**技术特点**：
+- 基于 Phaser 3 游戏引擎
+- TypeScript 类型安全
+- 幸存者类游戏机制（Vampire Survivors 风格）
+
+**已解决的问题**：
+1. ✅ `main.ts` - Phaser Game 实例未赋值给 `window.game`
+2. ✅ `Character.ts` - 构造函数 `super()` 调用问题
+
+---
+
 ## 📚 推荐资源
 
 ### 在线资源
