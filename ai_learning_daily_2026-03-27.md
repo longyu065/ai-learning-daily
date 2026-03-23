@@ -1,6 +1,6 @@
 # AI 知识学习日报
 
-> 每天学习时间：30分钟 | 学习主题：计算机视觉 | 推送时间：每天 08:30 (UTC)
+> 每天学习时间：30分钟 | 模式：20分钟大模型应用 + 10分钟机器学习基础 | 推送时间：每天 08:30 (UTC)
 
 ---
 
@@ -8,476 +8,464 @@
 
 ---
 
-### 🎯 今日主题：计算机视觉
+### 🎯 今日学习目标
+
+| 部分 | 时间 | 主题 |
+|------|------|------|
+| 🕐 20分钟 | **大模型应用** | Fine-tuning 微调 |
+| 🕐 10分钟 | **机器学习基础** | 计算机视觉基础 |
 
 ---
 
-## 📖 第一部分：计算机视觉基础（15分钟）
+## 📖 第一部分：20分钟 - Fine-tuning 微调
 
 ---
 
-### 1. 计算机视觉任务全景图
+### 1. 什么是 Fine-tuning？
+
+**Fine-tuning = 微调**
+
+**定义**：在预训练模型的基础上，用特定领域的数据继续训练
+
+**类比**：
+```
+预训练模型 = 大学毕业生（通识知识）
+微调 = 专业培训（领域知识）
+
+结果 = 某领域的专家
+```
+
+---
+
+### 2. 为什么需要 Fine-tuning？
+
+| 预训练模型 | 微调后 |
+|-----------|--------|
+| 通用知识 | 领域知识 |
+| 可能不懂行业术语 | 掌握行业术语 |
+| 输出风格通用 | 符合企业/品牌风格 |
+| 任务泛化 | 任务专精 |
+
+---
+
+### 3. Fine-tuning vs RAG
+
+| 维度 | Fine-tuning | RAG |
+|------|------------|-----|
+| **知识更新** | 需要重新训练 | 添加文档即可 |
+| **成本** | 高（GPU、时间） | 低 |
+| **适用场景** | 特定格式输出 | 知识问答 |
+| **能力提升** | 改变模型能力 | 提供外部知识 |
+| **结果** | 模型永久改变 | 不改变模型 |
+
+---
+
+### 4. Fine-tuning 的类型
+
+#### 1. 全量微调（Full Fine-tuning）
+
+更新模型的所有参数
+
+```
+预训练模型（100亿参数）
+    ↓
+用领域数据训练
+    ↓
+所有参数都更新
+```
+
+**优点**：效果最好
+**缺点**：成本高、需要大量数据
+
+---
+
+#### 2. 部分微调（Partial Fine-tuning）
+
+只更新部分层
+
+```
+预训练模型
+├── 底层层（通用特征）❌ 不更新
+├── 中间层 ⚠️ 选择性更新
+└── 顶层（任务特定）✅ 全部更新
+```
+
+**优点**：节省计算
+**缺点**：效果略差
+
+---
+
+#### 3. PEFT（参数高效微调）
+
+只更新少量参数
+
+| 方法 | 说明 | 参数量 |
+|------|------|--------|
+| **LoRA** | 低秩适配 | 1% |
+| **Prefix Tuning** | 前缀微调 | 0.1% |
+| **Prompt Tuning** | 提示微调 | 0.01% |
+
+---
+
+### 5. LoRA（Low-Rank Adaptation）
+
+**原理**：在原有权重上增加低秩矩阵
+
+```
+原权重 W
+    ↓
+W + A·B
+    ↓
+A·B 是低秩矩阵（参数少）
+```
+
+**优势**：
+- 只训练 0.1-1% 的参数
+- 效果接近全量微调
+- 可合并到原模型
+
+**代码示例**：
+
+```python
+from peft import LoraConfig, get_peft_model
+from transformers import AutoModelForCausalLM
+
+# 加载预训练模型
+model = AutoModelForCausalLM.from_pretrained("gpt2")
+
+# 配置 LoRA
+lora_config = LoraConfig(
+    r=16,  # 秩
+    lora_alpha=32,
+    target_modules=["q_proj", "v_proj"],  # 目标模块
+    lora_dropout=0.05,
+    bias="none"
+)
+
+# 应用 LoRA
+model = get_peft_model(model, lora_config)
+
+# 查看可训练参数
+model.print_trainable_parameters()
+# 输出：
+# trainable params: 0.24% || all params: 124M || trainable%: 0.24%
+```
+
+---
+
+### 6. Fine-tuning 流程
+
+```
+步骤1: 准备数据
+        ↓
+步骤2: 数据预处理
+        ↓
+步骤3: 配置模型
+        ↓
+步骤4: 训练
+        ↓
+步骤5: 评估
+        ↓
+步骤6: 保存模型
+```
+
+---
+
+### 7. 准备数据
+
+#### 数据格式
+
+```python
+# 格式1：对话格式（适合聊天）
+training_data = [
+    {
+        "messages": [
+            {"role": "system", "content": "你是一个 Java 代码助手。"},
+            {"role": "user", "content": "如何实现单例模式？"},
+            {"role": "assistant", "content": "单例模式有几种实现方式..."}
+        ]
+    },
+    {
+        "messages": [
+            {"role": "user", "content": "什么是设计模式？"},
+            {"role": "assistant", "content": "设计模式是解决常见软件设计问题的最佳实践..."}
+        ]
+    }
+]
+
+# 格式2：补全格式（适合文本生成）
+training_data = [
+    {
+        "prompt": "写一个冒泡排序函数：",
+        "completion": "def bubble_sort(arr):\n    n = len(arr)\n    ..."
+    },
+    {
+        "prompt": "解释什么是递归：",
+        "completion": "递归是指函数调用自身..."
+    }
+]
+```
+
+---
+
+### 8. 完整 Fine-tuning 示例
+
+#### 使用 Hugging Face
+
+```python
+from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, Trainer
+from datasets import Dataset
+import torch
+
+# 1. 加载模型和 tokenizer
+model_name = "gpt2"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(model_name)
+
+# 设置 pad_token
+tokenizer.pad_token = tokenizer.eos_token
+
+# 2. 准备数据
+data = [
+    {"input": "写一个冒泡排序", "output": "def bubble_sort(arr):\n    n = len(arr)\n    for i in range(n):\n        for j in range(0, n-i-1):\n            if arr[j] > arr[j+1]:\n                arr[j], arr[j+1] = arr[j+1], arr[j]\n    return arr"},
+    {"input": "写一个快速排序", "output": "def quick_sort(arr):\n    if len(arr) <= 1:\n        return arr\n    pivot = arr[len(arr) // 2]\n    left = [x for x in arr if x < pivot]\n    middle = [x for x in arr if x == pivot]\n    right = [x for x in arr if x > pivot]\n    return quick_sort(left) + middle + quick_sort(right)"}
+]
+
+# 3. 数据预处理
+def preprocess(examples):
+    inputs = [f"{item['input']}\n{item['output']}" for item in examples]
+    encodings = tokenizer(inputs, truncation=True, padding=True, max_length=512)
+
+    # 准备 labels
+    labels = []
+    for encoding in encodings['input_ids']:
+        labels.append([l if l != tokenizer.pad_token_id else -100 for l in encoding])
+
+    encodings['labels'] = labels
+    return encodings
+
+# 创建 dataset
+dataset = Dataset.from_list(data)
+tokenized_dataset = dataset.map(
+    preprocess,
+    batched=True,
+    remove_columns=dataset.column_names
+)
+
+# 4. 配置训练参数
+training_args = TrainingArguments(
+    output_dir="./results",
+    num_train_epochs=3,
+    per_device_train_batch_size=2,
+    learning_rate=2e-5,
+    logging_steps=10,
+    save_steps=100
+)
+
+# 5. 创建 Trainer
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=tokenized_dataset,
+    tokenizer=tokenizer
+)
+
+# 6. 训练
+trainer.train()
+
+# 7. 保存模型
+trainer.save_model("./fine_tuned_model")
+tokenizer.save_pretrained("./fine_tuned_model")
+```
+
+---
+
+### 9. 使用微调后的模型
+
+```python
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+# 加载微调模型
+model = AutoModelForCausalLM.from_pretrained("./fine_tuned_model")
+tokenizer = AutoTokenizer.from_pretrained("./fine_tuned_model")
+
+# 生成
+input_text = "写一个插入排序"
+inputs = tokenizer(input_text, return_tensors="pt")
+
+outputs = model.generate(
+    **inputs,
+    max_length=200,
+    temperature=0.7,
+    do_sample=True
+)
+
+result = tokenizer.decode(outputs[0], skip_special_tokens=True)
+print(result)
+```
+
+---
+
+## 📖 第二部分：10分钟 - 计算机视觉基础
+
+---
+
+### 什么是计算机视觉？
+
+**CV = Computer Vision**
+
+**定义**：让计算机"看懂"图像和视频
+
+---
+
+### 计算机视觉核心任务
 
 ```
 计算机视觉
 ├── 图像分类
-│   ├── 单标签分类
-│   └── 多标签分类
+│   ├── 二分类（猫/狗）
+│   └── 多分类（ImageNet 1000类）
 ├── 目标检测
-│   ├── 边界框检测
-│   └── 实例分割
+│   ├── 边界框检测（YOLO, Faster R-CNN）
+│   └── 实例分割（Mask R-CNN）
 ├── 语义分割
-│   ├── 像素级分类
-│   └── 全景分割
-├── 图像生成
-│   ├── 图像风格迁移
-│   ├── GAN
-│   └── 扩散模型
-└── 视频分析
-    ├── 动作识别
-    └── 目标跟踪
+│   └── 像素级分类
+└── 图像生成
+    ├── GAN
+    └── 扩散模型
 ```
 
 ---
 
-### 2. 图像基础知识
+### 图像基础知识
 
-#### 像素与图像
+#### 1. 像素和颜色
+
+```
+图像 = 像素矩阵
+
+RGB 图像：
+    R   G   B
+  [[255, 0, 0],   红色像素
+   [0, 255, 0],   绿色像素
+   [0, 0, 255]]   蓝色像素
+```
+
+**代码示例**：
 
 ```python
 import numpy as np
-import matplotlib.pyplot as plt
+from PIL import Image
 
-# 创建简单图像
-# 3x3 像素，RGB 通道
+# 创建图像
 image = np.array([
-    [[255, 0, 0], [0, 255, 0], [0, 0, 255]],  # 红 绿 蓝
-    [[255, 255, 0], [0, 255, 255], [255, 0, 255]],  # 黄 青 紫
-    [[0, 0, 0], [128, 128, 128], [255, 255, 255]]   # 黑 灰 白
+    [[255, 0, 0], [0, 255, 0]],
+    [[0, 0, 255], [255, 255, 0]]
 ], dtype=np.uint8)
 
-print(f"图像形状: {image.shape}")  # (3, 3, 3)
-print(f"数据类型: {image.dtype}")
+# 转换为 PIL Image
+pil_image = Image.fromarray(image)
+pil_image.show()
 
-plt.imshow(image)
-plt.title("3x3 RGB 图像")
-plt.show()
+# 形状：(高度, 宽度, 颜色通道)
+print(f"图像形状: {image.shape}")  # (2, 2, 3)
 ```
 
 ---
 
-#### 图像读取与处理
+#### 2. 卷积（Convolution）
 
-```python
-import cv2
-import numpy as np
+**核心操作**：用卷积核（kernel）在图像上滑动
 
-# 读取图像（OpenCV 是 BGR 格式）
-image = cv2.imread('image.jpg')
-print(f"图像尺寸: {image.shape}")
+```
+图像:         卷积核:
+1 2 3        1 1
+4 5 6        1 1
+7 8 9
 
-# 转换为 RGB
-image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+计算: 1×1 + 2×1 + 4×1 + 5×1 = 12
+```
 
-# 调整大小
-resized = cv2.resize(image_rgb, (224, 224))
+**作用**：
+- 提取特征（边缘、纹理）
+- 降采样
 
-# 灰度化
-gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+---
 
-# 保存图像
-cv2.imwrite('resized.jpg', resized)
+#### 3. CNN（卷积神经网络）
+
+**结构**：
+
+```
+输入图像 (224×224×3)
+    ↓
+卷积层 (提取特征)
+    ↓
+池化层 (降维)
+    ↓
+卷积层 (提取更高级特征)
+    ↓
+池化层
+    ↓
+展平
+    ↓
+全连接层 (分类)
+    ↓
+输出 (1000类)
 ```
 
 ---
 
-### 3. 图像增强
-
-#### 常用操作
-
-```python
-import cv2
-import numpy as np
-
-# 水平翻转
-flipped = cv2.flip(image, 1)
-
-# 旋转
-rows, cols = image.shape[:2]
-M = cv2.getRotationMatrix2D((cols/2, rows/2), 45, 1)
-rotated = cv2.warpAffine(image, M, (cols, rows))
-
-# 亮度调整
-brightness = cv2.convertScaleAbs(image, alpha=1.2, beta=20)
-
-# 对比度调整
-contrast = cv2.convertScaleAbs(image, alpha=1.5, beta=0)
-
-# 模糊
-blurred = cv2.GaussianBlur(image, (5, 5), 0)
-
-# 边缘检测
-edges = cv2.Canny(gray, 100, 200)
-```
-
----
-
-### 4. 经典 CNN 模型
-
-#### VGG16
-
-**特点**：简单、易理解
-
-```python
-import torch
-import torch.nn as nn
-import torchvision.models as models
-
-# 加载预训练模型
-vgg16 = models.vgg16(pretrained=True)
-print(vgg16)
-```
-
-**架构**：
-```
-输入 → 卷积块(64) → 卷积块(128) → 卷积块(256) × 2
-     → 卷积块(512) × 2 → 全连接层 → 输出
-```
-
----
-
-#### ResNet
-
-**特点**：残差连接，解决梯度消失
-
-```python
-# 加载 ResNet
-resnet = models.resnet50(pretrained=True)
-print(resnet)
-```
-
-**残差块**：
-```
-x → Conv1 → ReLU → Conv2 → + → ReLU
- ↑                              ↑
- └──────────────────────────────┘
-```
-
----
-
-#### MobileNet
-
-**特点**：轻量级，移动设备
-
-```python
-# 加载 MobileNet
-mobilenet = models.mobilenet_v2(pretrained=True)
-print(mobilenet)
-```
-
----
-
-### 5. 目标检测
-
-#### 两阶段检测器：Faster R-CNN
-
-```python
-# 加载 Faster R-CNN
-from torchvision.models.detection import fasterrcnn_resnet50_fpn
-
-model = fasterrcnn_resnet50_fpn(pretrained=True)
-model.eval()
-```
-
-**流程**：
-```
-图像 → RPN → 提取候选框 → 分类 + 回归 → 输出
-```
-
----
-
-#### 单阶段检测器：YOLO
-
-```python
-# 加载 YOLO
-import torch
-
-model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
-```
-
-**流程**：
-```
-图像 → 一次前向传播 → 边界框 + 类别 + 置信度
-```
-
----
-
-### 6. 图像分割
-
-#### 语义分割
-
-**任务**：为每个像素分类
-
-```python
-# 加载 DeepLabV3
-from torchvision.models.segmentation import deeplabv3_resnet50
-
-model = deeplabv3_resnet50(pretrained=True)
-model.eval()
-```
-
----
-
-#### 实例分割
-
-**任务**：区分不同实例
-
-```python
-# 加载 Mask R-CNN
-from torchvision.models.detection import maskrcnn_resnet50_fpn
-
-model = maskrcnn_resnet50_fpn(pretrained=True)
-model.eval()
-```
-
----
-
-### 7. 图像生成
-
-#### GAN（生成对抗网络）
-
-**架构**：
-```
-生成器（G）: 随机噪声 → 生成图像
-判别器（D）: 真实/生成图像 → 判断真假
-
-训练目标：
-- G: 欺骗 D
-- D: 区分真假
-```
-
----
-
-#### Stable Diffusion
-
-**原理**：扩散模型 + CLIP 文本编码
-
-**使用示例**：
-
-```python
-from diffusers import StableDiffusionPipeline
-import torch
-
-# 加载模型
-pipe = StableDiffusionPipeline.from_pretrained(
-    "runwayml/stable-diffusion-v1-5",
-    torch_dtype=torch.float16
-)
-pipe = pipe.to("cuda" if torch.cuda.is_available() else "cpu")
-
-# 生成图像
-prompt = "A beautiful sunset over mountains"
-image = pipe(prompt).images[0]
-
-# 保存
-image.save("generated_image.png")
-```
-
----
-
-### 8. Vision Transformer（ViT）
-
-**原理**：将图像视为序列，应用 Transformer
-
-**流程**：
-```
-图像 → 切片 → 线性投影 → 位置编码 → Transformer → 分类
-```
-
-```python
-from transformers import ViTForImageClassification, ViTImageProcessor
-
-# 加载模型
-processor = ViTImageProcessor.from_pretrained('google/vit-base-patch16-224')
-model = ViTForImageClassification.from_pretrained('google/vit-base-patch16-224')
-
-# 预测
-from PIL import Image
-image = Image.open('image.jpg')
-
-inputs = processor(images=image, return_tensors="pt")
-outputs = model(**inputs)
-predicted_class_idx = outputs.logits.argmax(-1).item()
-
-print(f"预测类别: {predicted_class_idx}")
-```
-
----
-
-## 💻 第二部分：实战练习（15分钟）
-
----
-
-### 练习1：图像分类
-
-```python
-import torch
-from torchvision import transforms
-from torchvision.models import resnet50, ResNet50_Weights
-from PIL import Image
-
-# 加载预训练模型
-weights = ResNet50_Weights.DEFAULT
-model = resnet50(weights=weights)
-model.eval()
-
-# 预处理
-preprocess = weights.transforms()
-
-# 读取图像
-image = Image.open('image.jpg')
-
-# 预处理
-input_tensor = preprocess(image)
-input_batch = input_tensor.unsqueeze(0)  # 添加 batch 维度
-
-# 预测
-with torch.no_grad():
-    output = model(input_batch)
-
-# 获取类别
-weights.meta['categories'][output[0].softmax(0).argmax()]
-top5 = output[0].softmax(0).topk(5)
-
-print("Top 5 预测:")
-for idx, (score, class_id) in enumerate(zip(top5.values, top5.indices)):
-    category = weights.meta['categories'][class_id]
-    print(f"{idx+1}. {category}: {score:.2%}")
-```
-
----
-
-### 练习2：目标检测
-
-```python
-import torch
-import torchvision
-from torchvision.models.detection import fasterrcnn_resnet50_fpn
-from PIL import Image
-import cv2
-
-# 加载模型
-model = fasterrcnn_resnet50_fpn(pretrained=True)
-model.eval()
-
-# 读取图像
-image = Image.open('image.jpg')
-image_tensor = torchvision.transforms.functional.to_tensor(image)
-
-# 预测
-with torch.no_grad():
-    predictions = model(image_tensor.unsqueeze(0))[0]
-
-# 可视化
-image_cv2 = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-
-for box, score, label in zip(predictions['boxes'],
-                            predictions['scores'],
-                            predictions['labels']):
-    if score > 0.5:  # 置信度阈值
-        x1, y1, x2, y2 = box.int().tolist()
-        cv2.rectangle(image_cv2, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        cv2.putText(image_cv2, f"{score:.2f}", (x1, y1-10),
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
-cv2.imshow('Detection', image_cv2)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
-```
-
----
-
-### 练习3：图像风格迁移
-
-```python
-import torch
-from torchvision import transforms
-from PIL import Image
-from torchvision.models import vgg19, VGG19_Weights
-
-# 加载模型
-weights = VGG19_Weights.DEFAULT
-vgg = vgg19(weights=weights).features
-
-# 加载图像
-content_img = Image.open('content.jpg')
-style_img = Image.open('style.jpg')
-
-# 预处理
-transform = transforms.Compose([
-    transforms.Resize((512, 512)),
-    transforms.ToTensor()
-])
-
-content = transform(content_img).unsqueeze(0)
-style = transform(style_img).unsqueeze(0)
-
-# 提取特征
-def get_features(image, model):
-    features = {}
-    x = image
-    for name, layer in model._modules.items():
-        x = layer(x)
-        features[name] = x
-    return features
-
-content_features = get_features(content, vgg)
-style_features = get_features(style, vgg)
-
-# 这里简化了风格迁移的完整流程
-# 实际应用中需要使用完整的 Neural Style Transfer 算法
-```
+### 经典模型
+
+| 模型 | 特点 |
+|------|------|
+| **LeNet** | 第一个 CNN (1998) |
+| **AlexNet** | 深度学习突破 (2012) |
+| **VGG** | 简单、易理解 |
+| **ResNet** | 残差连接，解决梯度消失 |
+| **MobileNet** | 轻量级，移动端 |
+| **EfficientNet** | 高效平衡 |
 
 ---
 
 ## ✅ 今天你学到了什么
 
-| 知识点 | 掌握程度 |
-|--------|---------|
-| 计算机视觉任务 | 🎯 已理解 |
-| 图像处理基础 | 🎯 已掌握 |
-| 图像增强 | 🎯 已掌握 |
-| 经典 CNN 模型（VGG, ResNet, MobileNet） | 🎯 已理解 |
-| 目标检测（Faster R-CNN, YOLO） | 🎯 已了解 |
-| 图像分割（语义、实例） | 🎯 已了解 |
-| 图像生成（GAN, Diffusion） | 🎯 已了解 |
-| Vision Transformer | 🎯 已了解 |
+| 部分 | 知识点 | 掌握程度 |
+|------|--------|---------|
+| Fine-tuning | Fine-tuning 定义 | 🎯 已理解 |
+| | 微调 vs RAG | 🎯 已掌握 |
+| | LoRA | 🎯 已理解 |
+| | 微调流程 | 🎯 已了解 |
+| | 数据准备 | 🎯 已了解 |
+| | Hugging Face 训练 | 🎯 已了解 |
+| 计算机视觉 | CV 定义 | 🎯 已理解 |
+| | 核心任务 | 🎯 已了解 |
+| | 像素和颜色 | 🎯 已掌握 |
+| | 卷积 | 🎯 已理解 |
+| | CNN 结构 | 🎯 已了解 |
+| | 经典模型 | 🎯 已了解 |
 
 ---
 
 ## 📝 今天的作业
 
-1. ✅ 尝试不同的图像增强方法
-2. ✅ 使用预训练模型进行图像分类
-3. ✅ 理解目标检测的输出格式
+1. ✅ 理解 Fine-tuning 的原理
+2. ✅ 了解 LoRA 的优势
+3. ✅ 理解计算机视觉的基础概念
 
 ---
 
-## 🚀 本周学习进度
+## 🚀 明天预告
 
-| 天数 | 日期 | 主题 | 状态 |
-|------|------|------|------|
-| 第1天 | 2026-03-24 | 机器学习基础 | ✅ |
-| 第2天 | 2026-03-25 | 深度学习 | ✅ |
-| 第3天 | 2026-03-26 | NLP | ✅ |
-| 第4天 | 2026-03-27 | 计算机视觉 | ✅ |
-| 第5天 | 2026-03-28 | 大语言模型 | 📅 |
-| 第6天 | 2026-03-29 | AI工程化 | ⏳ |
-| 第7天 | 2026-03-30 | 综合面试题 | ⏳ |
+| 时间 | 主题 |
+|------|------|
+| 🕐 20分钟 | 高级 Prompt 技巧 |
+| 🕐 10分钟 | 大语言模型原理 |
 
 ---
 
-**学习进度**：📊 第4天/第2周
+**学习进度**：📊 第4天/第3周
 
 ---
 

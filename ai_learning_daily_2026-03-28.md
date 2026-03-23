@@ -1,6 +1,6 @@
 # AI 知识学习日报
 
-> 每天学习时间：30分钟 | 学习主题：大语言模型（LLM） | 推送时间：每天 08:30 (UTC)
+> 每天学习时间：30分钟 | 模式：20分钟大模型应用 + 10分钟机器学习基础 | 推送时间：每天 08:30 (UTC)
 
 ---
 
@@ -8,592 +8,518 @@
 
 ---
 
-### 🎯 今日主题：大语言模型（LLM）
+### 🎯 今日学习目标
 
----
-
-## 📖 第一部分：LLM 核心概念（15分钟）
-
----
-
-### 1. 什么是 LLM？
-
-**LLM = Large Language Model**
-
-**定义**：在大规模文本数据上训练的大型神经网络，能够理解和生成自然语言
-
-**核心特点**：
-- 📏 **大**：数十亿到万亿参数
-- 🌐 **通用**：理解多种语言和任务
-- 🎯 **涌现能力**：未显式训练的能力
-- 🔄 **上下文学习**：从示例中学习
-
----
-
-### 2. Transformer 架构回顾
-
-**核心组件**：
-
-| 组件 | 作用 | 公式 |
+| 部分 | 时间 | 主题 |
 |------|------|------|
-| **Self-Attention** | 计算词间关系 | Attention(Q, K, V) = softmax(QK^T/√d)V |
-| **Multi-Head** | 多头注意力 | 并行多个注意力头 |
-| **Feed-Forward** | 非线性变换 | FFN(x) = ReLU(xW1 + b1)W2 + b2 |
-| **Layer Norm** | 层归一化 | 稳定训练 |
-| **Positional Encoding** | 位置信息 | PE(pos, 2i) = sin(pos/10000^(2i/d)) |
-
-**代码示例**：
-
-```python
-import torch
-import torch.nn as nn
-import math
-
-class MultiHeadAttention(nn.Module):
-    def __init__(self, d_model, num_heads):
-        super().__init__()
-        self.d_model = d_model
-        self.num_heads = num_heads
-        self.d_k = d_model // num_heads
-
-        self.W_q = nn.Linear(d_model, d_model)
-        self.W_k = nn.Linear(d_model, d_model)
-        self.W_v = nn.Linear(d_model, d_model)
-        self.W_o = nn.Linear(d_model, d_model)
-
-    def scaled_dot_product_attention(self, Q, K, V):
-        scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(self.d_k)
-        attention_weights = torch.softmax(scores, dim=-1)
-        output = torch.matmul(attention_weights, V)
-        return output
-
-    def forward(self, x):
-        batch_size, seq_len, d_model = x.shape
-
-        Q = self.W_q(x).view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
-        K = self.W_k(x).view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
-        V = self.W_v(x).view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
-
-        attention = self.scaled_dot_product_attention(Q, K, V)
-        attention = attention.transpose(1, 2).contiguous().view(batch_size, seq_len, d_model)
-
-        return self.W_o(attention)
-```
+| 🕐 20分钟 | **大模型应用** | 高级 Prompt 技巧 |
+| 🕐 10分钟 | **机器学习基础** | 大语言模型原理 |
 
 ---
 
-### 3. LLM 训练三阶段
-
-#### 阶段1：预训练（Pre-training）
-
-**目标**：学习语言规律
-
-**方法**：预测下一个 token
-
-```python
-# 简化的语言模型训练
-def language_model_loss(logits, targets):
-    """
-    logits: (batch, seq_len, vocab_size)
-    targets: (batch, seq_len)
-    """
-    batch_size, seq_len, vocab_size = logits.shape
-
-    # 重塑以便计算交叉熵
-    logits = logits.view(-1, vocab_size)
-    targets = targets.view(-1)
-
-    loss = nn.functional.cross_entropy(logits, targets)
-    return loss
-
-# 示例
-batch_size, seq_len, vocab_size = 4, 32, 50000
-logits = torch.randn(batch_size, seq_len, vocab_size)
-targets = torch.randint(0, vocab_size, (batch_size, seq_len))
-
-loss = language_model_loss(logits, targets)
-print(f"语言模型损失: {loss.item():.4f}")
-```
+## 📖 第一部分：20分钟 - 高级 Prompt 技巧
 
 ---
 
-#### 阶段2：指令微调（Instruction Fine-tuning）
+### 1. Few-shot Learning（少样本学习）
 
-**目标**：理解并遵循指令
+**定义**：通过几个示例教会模型如何完成任务
 
-**数据格式**：
-
-```
-指令: 请用一句话总结这篇文章。
-输入: [文章内容]
-输出: 这篇文章讨论了气候变化对农业的影响。
-```
-
-**训练代码**：
-
-```python
-def supervised_fine_tune(model, instruction_data):
-    """
-    instruction_data: list of (instruction, input, output)
-    """
-    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
-
-    for epoch in range(3):
-        total_loss = 0
-        for batch in instruction_data:
-            instruction, input_text, target_output = batch
-
-            # 拼接输入
-            prompt = f"指令: {instruction}\n输入: {input_text}\n输出: "
-
-            # 生成
-            outputs = model.generate(
-                prompt,
-                max_new_tokens=128,
-                labels=target_output
-            )
-
-            loss = outputs.loss
-            loss.backward()
-            optimizer.step()
-            optimizer.zero_grad()
-
-            total_loss += loss.item()
-
-        print(f"Epoch {epoch}, Loss: {total_loss/len(instruction_data):.4f}")
-```
+**为什么有效**：
+- 模型从示例中学习模式
+- 比纯文字描述更清晰
+- 减少歧义
 
 ---
 
-#### 阶段3：RLHF（基于人类反馈的强化学习）
-
-**目标**：对齐人类偏好
-
-**三步骤**：
-
-```
-步骤1: 收集人类偏好数据
-       → 比较 A 和 B 的输出
-
-步骤2: 训练奖励模型（Reward Model）
-       → 学习人类偏好
-
-步骤3: 使用 PPO 微调 LLM
-       → 最大化奖励
-```
-
-**RLHF 伪代码**：
+#### ✅ 基础示例
 
 ```python
-# 1. 收集偏好数据
-preferences = collect_human_preferences(model, prompts)
-
-# 2. 训练奖励模型
-reward_model = train_reward_model(preferences)
-
-# 3. PPO 微调
-def ppo_update(policy_model, reward_model, prompts):
-    for epoch in range(10):
-        # 生成响应
-        responses = policy_model.generate(prompts)
-
-        # 计算奖励
-        rewards = reward_model(prompts, responses)
-
-        # PPO 更新
-        policy_loss = compute_ppo_loss(policy_model, responses, rewards)
-        policy_loss.backward()
-        optimizer.step()
-```
-
----
-
-### 4. LLM 的关键能力
-
-#### 涌现能力（Emergent Abilities）
-
-| 能力 | 出现参数规模 | 说明 |
-|------|------------|------|
-| **上下文学习** | ~100B+ | 从示例中学习 |
-| **思维链** | ~100B+ | 分步推理 |
-| **代码生成** | ~10B+ | 编写代码 |
-| **多语言** | ~10B+ | 理解多种语言 |
-
----
-
-#### 上下文学习示例
-
-```python
-# 给 LLM 几个示例
 prompt = """
-任务：将句子翻译成中文
+任务：将句子转换成幽默版本
 
-示例1: "Hello" -> "你好"
-示例2: "Good morning" -> "早上好"
-示例3: "Thank you" -> "谢谢"
+示例1:
+输入: "今天天气不错。"
+输出: "今天天气好到我想去外太空散步！"
 
-输入: "How are you?"
-输出: """
+示例2:
+输入: "这道菜有点辣。"
+输出: "这道菜辣到我的舌头都要着火了！"
 
-# LLM 会根据示例学习模式
-# 输出可能是: "你好吗？"
+输入: "这个功能很实用。"
+输出:
+"""
+
+# 模型会根据示例模式生成幽默版本
 ```
 
 ---
 
-#### 思维链示例
+#### 🎯 Few-shot 分类
 
 ```python
-# 不使用思维链
-prompt = "15 + 37 = ?"
-# LLM 可能直接给出错误答案
-
-# 使用思维链
 prompt = """
-15 + 37 = ?
+任务：判断评论的情感（正面/负面）
 
-让我们一步步计算：
-1. 先算 5 + 7 = 12
-2. 写下 2，进位 1
-3. 再算 1 + 3 + 1 = 5
-4. 结果是 52
+示例:
+"这个产品非常好，强烈推荐！" -> 正面
+"质量太差了，退货！" -> 负面
+"还行，没什么特别的。" -> 中性
+"客服态度很差，不推荐。" -> 负面
+"超出预期，性价比很高！" -> 正面
 
-所以 15 + 37 = 52
+"这个APP经常崩溃，用得我很烦。" ->
+"""
+
+# 输出：负面
+```
+
+---
+
+#### 🎯 Few-shot 代码生成
+
+```python
+prompt = """
+任务：将 SQL 查询转换为 Python 代码
+
+示例1:
+SQL: SELECT * FROM users WHERE age > 18
+Python:
+import sqlite3
+conn = sqlite3.connect('db.sqlite')
+cursor = conn.cursor()
+cursor.execute("SELECT * FROM users WHERE age > 18")
+results = cursor.fetchall()
+
+示例2:
+SQL: INSERT INTO orders (user_id, amount) VALUES (1, 99.99)
+Python:
+import sqlite3
+conn = sqlite3.connect('db.sqlite')
+cursor = conn.cursor()
+cursor.execute("INSERT INTO orders (user_id, amount) VALUES (1, 99.99)")
+conn.commit()
+
+SQL: UPDATE users SET status = 'active' WHERE id = 1
+Python:
 """
 ```
 
 ---
 
-### 5. LLM 的关键参数
+### 2. Chain-of-Thought（思维链）
 
-#### Temperature（温度）
+**定义**：让模型分步骤思考
 
-| 值 | 效果 | 适用场景 |
-|----|------|---------|
-| **0.1-0.3** | 更确定、一致 | 编程、翻译 |
-| **0.5-0.7** | 平衡 | 通用问答 |
-| **0.8-1.2** | 更随机、有创意 | 创意写作 |
-| **1.5+** | 非常随机 | 不太使用 |
+**适用场景**：
+- 数学计算
+- 逻辑推理
+- 复杂问题
+
+---
+
+#### 📊 数学计算
 
 ```python
-import torch
-import torch.nn.functional as F
+# ❌ 直接提问
+prompt = "计算 23 × 45 + 67 ÷ 3"
+# 可能出错
 
-def sample_with_temperature(logits, temperature=0.7):
-    """带温度的采样"""
-    logits = logits / temperature
-    probs = F.softmax(logits, dim=-1)
-    next_token = torch.multinomial(probs, num_samples=1)
-    return next_token
+# ✅ 思维链
+prompt = """
+计算：23 × 45 + 67 ÷ 3
 
-# 示例
-logits = torch.tensor([1.0, 2.0, 1.5, 0.5])
+请分步骤计算：
+步骤1：计算 23 × 45
+步骤2：计算 67 ÷ 3
+步骤3：将步骤1和步骤2的结果相加
+步骤4：给出最终答案
 
-# 不同温度
-for temp in [0.1, 0.5, 1.0, 2.0]:
-    token = sample_with_temperature(logits, temp)
-    print(f"温度 {temp}: token = {token.item()}")
+请按步骤输出：
+步骤1：...
+步骤2：...
+步骤3：...
+步骤4：...
+"""
+
+# 输出：
+# 步骤1：23 × 45 = 1035
+# 步骤2：67 ÷ 3 ≈ 22.333
+# 步骤3：1035 + 22.333 = 1057.333
+# 步骤4：最终答案 ≈ 1057.333
 ```
 
 ---
 
-#### Top-p / Top-k
-
-**Top-k**：从概率最高的 k 个中采样
-**Top-p**：从累积概率达到 p 的词中采样
+#### 🔍 代码调试
 
 ```python
-def top_k_sampling(logits, k=50):
-    """Top-k 采样"""
-    top_k_logits, top_k_indices = torch.topk(logits, k)
+prompt = """
+以下代码在处理大数据时很慢，请帮我分析并优化：
 
-    # 只考虑 top-k 的词
-    logits_filtered = torch.full_like(logits, float('-inf'))
-    logits_filtered.scatter_(1, top_k_indices, top_k_logits)
+```python
+def get_users_by_ids(ids):
+    users = []
+    for user_id in ids:
+        user = db.query(f"SELECT * FROM users WHERE id = {user_id}")
+        users.append(user)
+    return users
+```
 
-    probs = F.softmax(logits_filtered, dim=-1)
-    return torch.multinomial(probs, num_samples=1)
-
-def top_p_sampling(logits, p=0.9):
-    """Top-p（nucleus）采样"""
-    sorted_logits, sorted_indices = torch.sort(logits, descending=True)
-    cumulative_probs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
-
-    # 移除累积概率超过 p 的词
-    sorted_indices_to_remove = cumulative_probs > p
-    sorted_indices_to_remove[:, 1:] = sorted_indices_to_remove[:, :-1].clone()
-    sorted_indices_to_remove[:, 0] = 0
-
-    sorted_logits[sorted_indices_to_remove] = float('-inf')
-
-    probs = F.softmax(sorted_logits, dim=-1)
-    sampled_indices = torch.multinomial(probs, num_samples=1)
-
-    return torch.gather(sorted_indices, 1, sampled_indices)
+请按以下步骤分析：
+步骤1：找出代码的性能问题
+步骤2：解释为什么慢
+步骤3：提供优化方案
+步骤4：给出优化后的代码
+"""
 ```
 
 ---
 
-#### Context Window（上下文窗口）
+### 3. Few-shot CoT（少样本 + 思维链）
 
-**含义**：模型能处理的最大 token 数
-
-| 模型 | 上下文窗口 |
-|------|-----------|
-| **GPT-3.5** | 16K |
-| **GPT-4** | 128K |
-| **Claude 3** | 200K |
-| **Gemini 1.5** | 1M |
-
-**使用技巧**：
+**结合两者，效果更好**
 
 ```python
-# 检查 token 数量
-import tiktoken
+prompt = """
+任务：解决数学应用题
 
-def count_tokens(text, model="gpt-3.5-turbo"):
-    encoding = tiktoken.encoding_for_model(model)
-    return len(encoding.encode(text))
+示例1:
+问题：小明有15个苹果，吃了3个，又买了5个，现在有多少个？
+思考：
+- 初始：15个
+- 吃了：15 - 3 = 12个
+- 买了：12 + 5 = 17个
+答案：17个
 
-text = "Hello, world!"
-print(f"Token 数量: {count_tokens(text)}")
+示例2:
+问题：一个长方形的长是10cm，宽是5cm，面积是多少？
+思考：
+- 面积公式：长 × 宽
+- 计算：10 × 5 = 50
+答案：50平方厘米
 
-# 截断到上下文窗口
-def truncate_text(text, max_tokens=4096, model="gpt-3.5-turbo"):
-    encoding = tiktoken.encoding_for_model(model)
-    tokens = encoding.encode(text)
-    if len(tokens) > max_tokens:
-        tokens = tokens[:max_tokens]
-    return encoding.decode(tokens)
+问题：张三有3本书，李四的书是张三的2倍，王五的书比李四多2本，三人一共有多少本？
+思考：
+"""
 ```
 
 ---
 
-### 6. RAG（检索增强生成）
+### 4. Self-Consistency（自洽性）
 
-**RAG = Retrieval-Augmented Generation**
+**定义**：生成多个答案，选择最一致的
 
-**原理**：
-```
-问题 → 向量检索 → 相关文档 → LLM 生成答案
-```
+**步骤**：
+1. 生成多个推理路径
+2. 统计每个答案的出现次数
+3. 选择最频繁的答案
 
-**完整流程**：
+---
+
+#### 📊 示例
 
 ```python
-from sentence_transformers import SentenceTransformer
-import faiss
-import numpy as np
+# 多次采样
+responses = []
+for _ in range(5):
+    response = generate(prompt, temperature=0.8)  # 高温度增加多样性
+    responses.append(extract_answer(response))
 
-# 1. 文档嵌入
-class DocumentRetriever:
-    def __init__(self):
-        self.encoder = SentenceTransformer('all-MiniLM-L6-v2')
-        self.index = None
-        self.documents = []
+# 统计
+answer_counts = Counter(responses)
+most_common = answer_counts.most_common(1)[0][0]
 
-    def add_documents(self, docs):
-        """添加文档到索引"""
-        embeddings = self.encoder.encode(docs)
-        self.documents.extend(docs)
+print(f"最终答案: {most_common}")
+```
 
-        if self.index is None:
-            self.index = faiss.IndexFlatL2(embeddings.shape[1])
-        self.index.add(embeddings.astype('float32'))
+---
 
-    def retrieve(self, query, k=3):
-        """检索最相关的文档"""
-        query_embedding = self.encoder.encode([query])
-        distances, indices = self.index.search(query_embedding.astype('float32'), k)
+### 5. Generated Knowledge（生成知识）
 
-        results = []
-        for i, (dist, idx) in enumerate(zip(distances[0], indices[0])):
-            results.append({
-                'doc': self.documents[idx],
-                'score': dist,
-                'rank': i + 1
-            })
+**定义**：先生成相关知识，再回答问题
 
-        return results
+**优势**：
+- 补充背景知识
+- 提高答案质量
+
+---
+
+#### 📚 示例
+
+```python
+prompt = """
+任务：回答以下问题
+
+步骤1：生成与问题相关的知识
+步骤2：基于知识回答问题
+
+问题：为什么深度学习需要GPU？
+
+请按步骤回答：
+
+步骤1（相关知识）：
+"""
+```
+
+**模型输出**：
+```
+步骤1（相关知识）：
+- GPU 有更多核心，适合并行计算
+- 深度学习需要大量矩阵运算，可以并行化
+- GPU 专用显存，速度快
+- 深度学习框架（PyTorch, TensorFlow）针对GPU优化
+
+步骤2（回答）：
+深度学习需要GPU的原因：
+1. 并行计算能力强：GPU有数千个核心，可同时处理大量矩阵运算
+2. 大规模矩阵运算：深度学习的核心是矩阵乘法，GPU效率是CPU的10-100倍
+3. 专用显存：GPU有高速显存，减少数据传输延迟
+4. 框架优化：PyTorch、TensorFlow等框架针对GPU优化，充分利用硬件
+```
+
+---
+
+### 6. Refinement（迭代优化）
+
+**定义**：先生成初稿，再逐步改进
+
+**适用于**：
+- 长文本生成
+- 代码生成
+- 文章写作
+
+---
+
+#### 📝 示例
+
+```python
+# 第一轮：生成初稿
+prompt1 = """
+写一段介绍机器学习的文字，大约200字。
+"""
+draft = generate(prompt1)
+
+# 第二轮：优化
+prompt2 = f"""
+以下是我写的初稿：
+
+{draft}
+
+请帮我优化：
+1. 使语言更简洁
+2. 使用更准确的术语
+3. 增加一个具体例子
+
+优化后的文本：
+"""
+refined = generate(prompt2)
+
+# 第三轮：格式化
+prompt3 = f"""
+以下文本需要格式化为Markdown格式：
+
+{refined}
+
+请添加：
+- 小标题
+- 列表
+- 重点标记
+
+格式化后的文本：
+"""
+final = generate(prompt3)
+```
+
+---
+
+### 7. 模板：高质量 Prompt 结构
+
+```python
+def create_high_quality_prompt(task, context, examples, format, constraints):
+    """创建高质量 Prompt"""
+    prompt = f"""
+## 角色设定
+你是一位 {role}，擅长 {expertise}。
+
+## 任务描述
+{task}
+
+## 上下文信息
+{context}
+
+## 示例
+{examples}
+
+## 输出格式
+{format}
+
+## 约束条件
+{constraints}
+
+## 注意事项
+1. ...
+2. ...
+3. ...
+
+现在请完成任务：
+"""
+    return prompt
 
 # 使用
-retriever = DocumentRetriever()
-docs = [
-    "Python 是一种高级编程语言",
-    "机器学习是 AI 的子领域",
-    "深度学习使用神经网络"
-]
-retriever.add_documents(docs)
-
-# 检索
-query = "什么是深度学习？"
-results = retriever.retrieve(query)
-
-for r in results:
-    print(f"Rank {r['rank']}: {r['doc']}")
-```
-
----
-
-### 7. Fine-tuning vs RAG
-
-| 维度 | Fine-tuning | RAG |
-|------|------------|-----|
-| **更新知识** | 需要重新训练 | 直接添加文档 |
-| **训练成本** | 高 | 低 |
-| **知识时效性** | 差 | 好 |
-| **幻觉问题** | 仍存在 | 减少幻觉 |
-| **适用场景** | 领域特定任务 | 问答、知识检索 |
-
----
-
-## 💻 第二部分：实战练习（15分钟）
-
----
-
-### 练习1：使用 OpenAI API
-
-```python
-from openai import OpenAI
-
-client = OpenAI(api_key="your-api-key")
-
-# 聊天补全
-response = client.chat.completions.create(
-    model="gpt-3.5-turbo",
-    messages=[
-        {"role": "system", "content": "你是一个有帮助的助手。"},
-        {"role": "user", "content": "用一句话解释什么是机器学习。"}
-    ],
-    temperature=0.7,
-    max_tokens=100
+prompt = create_high_quality_prompt(
+    role="Java 代码审查专家",
+    expertise="识别性能问题和安全隐患",
+    task="审查以下代码，找出所有问题",
+    context="这是一个高并发的电商系统代码",
+    examples="[示例1...]\n[示例2...]",
+    format="| 问题 | 严重程度 | 说明 | 修复方案 |",
+    constraints="- 必须检查并发问题\n- 必须检查SQL注入\n- 必须检查空指针"
 )
-
-print(response.choices[0].message.content)
 ```
 
 ---
 
-### 练习2：计算 Token 数量
+## 📖 第二部分：10分钟 - 大语言模型原理
 
-```python
-import tiktoken
+---
 
-def analyze_text_tokens(text, model="gpt-3.5-turbo"):
-    encoding = tiktoken.encoding_for_model(model)
-    tokens = encoding.encode(text)
+### 什么是 LLM？
 
-    print(f"文本: {text}")
-    print(f"Token 数量: {len(tokens)}")
-    print(f"Tokens: {tokens}")
-    print(f"解码后: {encoding.decode(tokens)}")
+**LLM = Large Language Model**
 
-# 示例
-text = "Hello, world! How are you today?"
-analyze_text_tokens(text)
+**定义**：在大规模文本数据上训练的大型神经网络
+
+---
+
+### LLM 训练三阶段
+
+```
+阶段1: 预训练（Pre-training）
+  └─ 学习语言规律
+  └─ 需要海量数据
+
+阶段2: 指令微调（Instruction Fine-tuning）
+  └─ 学习遵循指令
+  └─ 需要指令-响应对
+
+阶段3: RLHF（基于人类反馈的强化学习）
+  └─ 学习人类偏好
+  └─ 需要人类偏好数据
 ```
 
 ---
 
-### 练习3：简单的 RAG 实现
+### 1. 预训练（Pre-training）
 
-```python
-from sentence_transformers import SentenceTransformer
-import numpy as np
+**任务**：预测下一个词
 
-# 知识库
-knowledge_base = [
-    "机器学习是 AI 的一个子领域",
-    "深度学习使用多层神经网络",
-    "NLP 处理自然语言数据",
-    "计算机视觉处理图像数据"
-]
+```
+输入: "人工智能的"
+输出: "未来" (概率: 30%)
+       "发展" (概率: 25%)
+       ...
+```
 
-# 编码器
-encoder = SentenceTransformer('all-MiniLM-L6-v2')
+**训练过程**：
+1. 收集海量文本（万亿级token）
+2. 每次让模型预测下一个词
+3. 如果预测正确，调整参数
+4. 重复数十亿次
 
-# 计算嵌入
-doc_embeddings = encoder.encode(knowledge_base)
+---
 
-# 查询
-query = "什么是深度学习？"
-query_embedding = encoder.encode([query])
+### 2. 指令微调（Instruction Fine-tuning）
 
-# 计算相似度（余弦相似度）
-similarities = np.dot(query_embedding, doc_embeddings.T)[0]
+**目的**：让模型理解并遵循指令
 
-# 获取最相关的文档
-top_idx = np.argmax(similarities)
-print(f"查询: {query}")
-print(f"最相关的文档: {knowledge_base[top_idx]}")
-print(f"相似度: {similarities[top_idx]:.4f}")
+**数据格式**：
+```
+指令: 用一句话解释什么是机器学习。
+输入: (可选)
+输出: 机器学习是让计算机从数据中学习规律的AI分支。
+```
+
+**流程**：
+1. 收集指令数据
+2. 继续训练模型
+3. 模型学会"遵循指令"
+
+---
+
+### 3. RLHF
+
+**目的**：对齐人类偏好
+
+**三步骤**：
+
+```
+步骤1: 收集人类偏好
+       → 比较两个回答（A vs B）
+       → 标注哪个更好
+
+步骤2: 训练奖励模型
+       → 学习人类偏好
+
+步骤3: PPO 微调
+       → 最大化奖励
 ```
 
 ---
 
-### 练习4：Temperature 对比
+### Transformer 架构
 
-```python
-from openai import OpenAI
+**核心**：自注意力机制
 
-client = OpenAI(api_key="your-api-key")
-
-prompt = "写一个关于 AI 的简短故事。"
-
-# 不同温度
-for temp in [0.3, 0.7, 1.0]:
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=temp,
-        max_tokens=100
-    )
-
-    print(f"\n温度 {temp}:")
-    print(response.choices[0].message.content)
 ```
+Attention(Q, K, V) = softmax(QK^T / √d_k)V
+```
+
+**优势**：
+- 并行计算
+- 捕捉长距离依赖
+- 可解释性强
 
 ---
 
 ## ✅ 今天你学到了什么
 
-| 知识点 | 掌握程度 |
-|--------|---------|
-| LLM 定义和特点 | 🎯 已理解 |
-| Transformer 架构 | 🎯 已掌握 |
-| LLM 训练三阶段 | 🎯 已理解 |
-| 涌现能力 | 🎯 已了解 |
-| Temperature | 🎯 已掌握 |
-| Context Window | 🎯 已掌握 |
-| RAG 原理和实现 | 🎯 已掌握 |
-| Fine-tuning vs RAG | 🎯 已理解 |
+| 部分 | 知识点 | 掌握程度 |
+|------|--------|---------|
+| 高级 Prompt | Few-shot Learning | 🎯 已掌握 |
+| | Chain-of-Thought | 🎯 已掌握 |
+| | Few-shot CoT | 🎯 已了解 |
+| | Self-Consistency | 🎯 已了解 |
+| | Generated Knowledge | 🎯 已了解 |
+| | Refinement | 🎯 已了解 |
+| | 高质量 Prompt 结构 | 🎯 已掌握 |
+| LLM 原理 | LLM 定义 | 🎯 已理解 |
+| | 训练三阶段 | 🎯 已理解 |
+| | 预训练 | 🎯 已理解 |
+| | 指令微调 | 🎯 已理解 |
+| | RLHF | 🎯 已了解 |
+| | Transformer | 🎯 已了解 |
 
 ---
 
 ## 📝 今天的作业
 
-1. ✅ 尝试使用 OpenAI API
-2. ✅ 计算不同文本的 token 数量
-3. ✅ 实现一个简单的 RAG 系统
-4. ✅ 对比不同 temperature 的效果
+1. ✅ 使用 Few-shot Learning 让模型完成特定任务
+2. ✅ 尝试 Chain-of-Thought 解决复杂问题
+3. ✅ 理解 LLM 的训练过程
 
 ---
 
-## 🚀 本周学习进度
+## 🚀 明天预告
 
-| 天数 | 日期 | 主题 | 状态 |
-|------|------|------|------|
-| 第1天 | 2026-03-24 | 机器学习基础 | ✅ |
-| 第2天 | 2026-03-25 | 深度学习 | ✅ |
-| 第3天 | 2026-03-26 | NLP | ✅ |
-| 第4天 | 2026-03-27 | 计算机视觉 | ✅ |
-| 第5天 | 2026-03-28 | 大语言模型 | ✅ |
-| 第6天 | 2026-03-29 | AI工程化 | 📅 |
-| 第7天 | 2026-03-30 | 综合面试题 | ⏳ |
+| 时间 | 主题 |
+|------|------|
+| 🕐 20分钟 | Agent 智能体 |
+| 🕐 10分钟 | AI 工程化 |
 
 ---
 
-**学习进度**：📊 第5天/第2周
+**学习进度**：📊 第5天/第3周
 
 ---
 

@@ -1,6 +1,6 @@
 # AI 知识学习日报
 
-> 每天学习时间：30分钟 | 学习主题：深度学习 | 推送时间：每天 08:30 (UTC)
+> 每天学习时间：30分钟 | 模式：20分钟大模型应用 + 10分钟机器学习基础 | 推送时间：每天 08:30 (UTC)
 
 ---
 
@@ -8,15 +8,351 @@
 
 ---
 
-### 🎯 今日主题：深度学习
+### 🎯 今日学习目标
+
+| 部分 | 时间 | 主题 |
+|------|------|------|
+| 🕐 20分钟 | **大模型应用** | OpenAI API 调用 |
+| 🕐 10分钟 | **机器学习基础** | 深度学习基础 |
 
 ---
 
-## 📖 第一部分：深度学习基础（15分钟）
+## 📖 第一部分：20分钟 - OpenAI API 调用
 
 ---
 
-### 1. 什么是深度学习？
+### 1. OpenAI API 简介
+
+**OpenAI API**：使用 OpenAI 提供的大模型能力（GPT-4, GPT-3.5 等）
+
+**主要能力**：
+- 💬 聊天对话
+- 📝 文本生成
+- 🏷️ 分类标注
+- 🔄 代码补全
+- 🎨 图像生成（DALL-E）
+
+---
+
+### 2. API 密钥获取
+
+**步骤**：
+
+1. 访问 https://platform.openai.com/
+2. 注册/登录账号
+3. 进入 API Keys 页面
+4. 点击 "Create new secret key"
+5. 复制密钥（只显示一次，妥善保存！）
+
+**环境变量设置**：
+
+```bash
+# Windows
+set OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxx
+
+# Linux/Mac
+export OPENAI_API_KEY="sk-xxxxxxxxxxxxxxxxxxxxxxxx"
+```
+
+---
+
+### 3. 安装 SDK
+
+```bash
+# 安装 OpenAI Python SDK
+pip install openai
+
+# 验证安装
+python -c "import openai; print(openai.__version__)"
+```
+
+---
+
+### 4. 基础调用
+
+#### 📝 最简单的调用
+
+```python
+from openai import OpenAI
+
+# 初始化客户端
+client = OpenAI(api_key="你的API密钥")
+
+# 调用聊天接口
+response = client.chat.completions.create(
+    model="gpt-3.5-turbo",  # 模型选择
+    messages=[
+        {"role": "system", "content": "你是一个有帮助的助手。"},
+        {"role": "user", "content": "你好！"}
+    ]
+)
+
+# 获取回答
+answer = response.choices[0].message.content
+print(answer)
+# 输出：你好！有什么可以帮助你的吗？
+```
+
+---
+
+#### 🔑 从环境变量读取密钥
+
+```python
+import os
+from openai import OpenAI
+
+# 从环境变量读取
+api_key = os.getenv("OPENAI_API_KEY")
+
+# 初始化客户端
+client = OpenAI(api_key=api_key)
+
+# 调用
+response = client.chat.completions.create(
+    model="gpt-3.5-turbo",
+    messages=[
+        {"role": "user", "content": "用一句话解释什么是机器学习。"}
+    ]
+)
+
+print(response.choices[0].message.content)
+```
+
+---
+
+### 5. 参数详解
+
+#### 📊 核心参数
+
+| 参数 | 说明 | 示例 |
+|------|------|------|
+| **model** | 使用的模型 | "gpt-3.5-turbo", "gpt-4" |
+| **messages** | 对话消息 | [{"role": "user", "content": "..."}] |
+| **temperature** | 随机性（0-2） | 0.7（默认） |
+| **max_tokens** | 最大输出token数 | 100 |
+| **top_p** | 核采样（0-1） | 0.9 |
+| **frequency_penalty** | 频率惩罚（-2-2） | 0 |
+| **presence_penalty** | 存在惩罚（-2-2） | 0 |
+
+---
+
+#### 🌡️ Temperature 参数
+
+**控制输出的随机性和创造性**：
+
+| 温度 | 效果 | 适用场景 |
+|------|------|---------|
+| **0.1-0.3** | 更确定、一致 | 代码生成、翻译 |
+| **0.5-0.7** | 平衡 | 通用对话 |
+| **0.8-1.2** | 更随机、有创意 | 创意写作、头脑风暴 |
+
+```python
+# 低温度（更确定）
+response = client.chat.completions.create(
+    model="gpt-3.5-turbo",
+    messages=[{"role": "user", "content": "写一个函数，计算斐波那契数列"}],
+    temperature=0.1
+)
+
+# 高温度（更有创意）
+response = client.chat.completions.create(
+    model="gpt-3.5-turbo",
+    messages=[{"role": "user", "content": "写一个关于AI的科幻故事"}],
+    temperature=1.0
+)
+```
+
+---
+
+### 6. 实战案例
+
+#### 💻 案例1：代码助手
+
+```python
+from openai import OpenAI
+
+client = OpenAI()
+
+def code_review(code: str) -> str:
+    """代码审查"""
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {
+                "role": "system",
+                "content": "你是一位资深代码审查专家，擅长发现代码中的问题。"
+            },
+            {
+                "role": "user",
+                "content": f"""
+请审查以下 Java 代码，指出问题并给出优化建议：
+
+```java
+{code}
+```
+
+请以表格形式输出：
+| 问题 | 严重程度 | 说明 | 修复建议 |
+"""
+            }
+        ],
+        temperature=0.3
+    )
+
+    return response.choices[0].message.content
+
+# 使用
+code = """
+public List<String> filterLongStrings(List<String> list) {
+    List<String> result = new ArrayList<>();
+    for (String s : list) {
+        if (s.length() > 10) {
+            result.add(s);
+        }
+    }
+    return result;
+}
+"""
+
+print(code_review(code))
+```
+
+---
+
+#### 💻 案例2：Java API 文档生成器
+
+```python
+def generate_javadoc(method_code: str) -> str:
+    """生成 JavaDoc"""
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {
+                "role": "system",
+                "content": "你是一位 Java 开发专家，擅长编写规范的 JavaDoc 注释。"
+            },
+            {
+                "role": "user",
+                "content": f"""
+为以下 Java 方法生成完整的 JavaDoc 注释：
+
+```java
+{method_code}
+```
+
+要求：
+1. 包含方法描述
+2. @param 参数说明
+3. @return 返回值说明
+4. @throws 异常说明
+5. @since 版本信息
+"""
+            }
+        ],
+        temperature=0.2
+    )
+
+    return response.choices[0].message.content
+
+# 使用
+method = """
+public User getUserById(Long id) {
+    if (id == null) {
+        throw new IllegalArgumentException("ID不能为空");
+    }
+    return userRepository.findById(id)
+        .orElseThrow(() -> new UserNotFoundException(id));
+}
+"""
+
+print(generate_javadoc(method))
+```
+
+---
+
+#### 💻 案例3：对话历史管理
+
+```python
+class ChatAssistant:
+    """对话助手"""
+
+    def __init__(self):
+        self.client = OpenAI()
+        self.messages = [
+            {"role": "system", "content": "你是一个有帮助的编程助手。"}
+        ]
+
+    def add_message(self, role: str, content: str):
+        """添加消息"""
+        self.messages.append({"role": role, "content": content})
+
+        # 限制历史长度（避免 token 超限）
+        if len(self.messages) > 10:
+            self.messages = [self.messages[0]] + self.messages[-9:]
+
+    def chat(self, user_input: str) -> str:
+        """对话"""
+        self.add_message("user", user_input)
+
+        response = self.client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=self.messages,
+            temperature=0.7
+        )
+
+        assistant_reply = response.choices[0].message.content
+
+        self.add_message("assistant", assistant_reply)
+
+        return assistant_reply
+
+# 使用
+assistant = ChatAssistant()
+
+print(assistant.chat("什么是设计模式？"))
+print(assistant.chat("给我举一个单例模式的例子"))
+print(assistant.chat("单例模式有什么缺点？"))
+```
+
+---
+
+### 7. 错误处理
+
+```python
+from openai import OpenAI
+from openai import OpenAIError
+
+client = OpenAI()
+
+def safe_chat(prompt: str) -> str:
+    """安全的聊天调用"""
+    try:
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7
+        )
+        return response.choices[0].message.content
+
+    except OpenAIError as e:
+        # 处理 OpenAI API 错误
+        return f"API 错误: {e}"
+
+    except Exception as e:
+        # 处理其他错误
+        return f"未知错误: {e}"
+
+# 使用
+print(safe_chat("你好"))
+```
+
+---
+
+## 📖 第二部分：10分钟 - 深度学习基础
+
+---
+
+### 什么是深度学习？
 
 **定义**：基于多层神经网络的机器学习方法
 
@@ -25,460 +361,116 @@
 | 维度 | 传统机器学习 | 深度学习 |
 |------|------------|---------|
 | **特征工程** | 手工设计 | 自动学习 |
-| **数据量** | 小到中等 | 需要大量数据 |
-| **模型复杂度** | 较简单 | 非常复杂 |
+| **数据量需求** | 中等 | 需要大量数据 |
 | **计算资源** | CPU | GPU/TPU |
+| **模型复杂度** | 相对简单 | 可以非常复杂 |
 | **可解释性** | 较好 | 较差（黑盒） |
-
-**深度学习成功的原因**：
-1. **大数据**：互联网提供海量数据
-2. **大算力**：GPU 加速计算
-3. **新算法**：更深的网络、更好的优化
 
 ---
 
-### 2. 神经网络基础
+### 神经网络基础
 
-#### 感知机（Perceptron）
+#### 1. 神经元（感知机）
 
 **结构**：
+
 ```
 输入 x1, x2, x3
     ↓   ↓   ↓
   权重 w1, w2, w3
     ↓   ↓   ↓
-    加权求和 → 激活函数 → 输出
+  加权求和 + 偏置
+    ↓
+  激活函数
+    ↓
+  输出
 ```
 
-**代码示例**：
-
-```python
-import numpy as np
-
-class Perceptron:
-    def __init__(self, input_size):
-        self.weights = np.random.randn(input_size)
-        self.bias = 0
-
-    def forward(self, x):
-        # 加权求和 + 偏置
-        z = np.dot(x, self.weights) + self.bias
-        # 激活函数（阶跃函数）
-        return 1 if z > 0 else 0
-
-# 使用
-perceptron = Perceptron(input_size=3)
-x = np.array([1, 0, 1])
-output = perceptron.forward(x)
-print(f"输出: {output}")
+**公式**：
 ```
+y = f(w1*x1 + w2*x2 + ... + wn*xn + b)
+```
+- `w`: 权重
+- `b`: 偏置
+- `f`: 激活函数
 
 ---
 
-#### 多层感知机（MLP）
-
-**结构**：
-```
-输入层 → 隐藏层 → 输出层
-```
-
-**代码示例**（使用 PyTorch）：
-
-```python
-import torch
-import torch.nn as nn
-
-# 定义 MLP
-class MLP(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
-        super(MLP, self).__init__()
-        self.fc1 = nn.Linear(input_size, hidden_size)  # 输入层 → 隐藏层
-        self.relu = nn.ReLU()                          # 激活函数
-        self.fc2 = nn.Linear(hidden_size, output_size) # 隐藏层 → 输出层
-
-    def forward(self, x):
-        x = self.fc1(x)
-        x = self.relu(x)
-        x = self.fc2(x)
-        return x
-
-# 创建模型
-model = MLP(input_size=10, hidden_size=20, output_size=2)
-
-# 前向传播
-x = torch.randn(1, 10)
-output = model(x)
-print(f"输出形状: {output.shape}")  # 输出形状: torch.Size([1, 2])
-```
-
----
-
-### 3. 激活函数
+#### 2. 激活函数
 
 **作用**：引入非线性，让网络能学习复杂模式
 
+**常见激活函数**：
+
 | 激活函数 | 公式 | 特点 | 适用场景 |
 |---------|------|------|---------|
+| **ReLU** | max(0, x) | 简单、收敛快 | 隐藏层（最常用） |
 | **Sigmoid** | 1/(1+e^(-x)) | 输出0-1 | 二分类输出 |
 | **Tanh** | (e^x-e^(-x))/(e^x+e^(-x)) | 输出-1到1 | RNN |
-| **ReLU** | max(0, x) | 简单、收敛快 | 隐藏层（最常用） |
-| **Leaky ReLU** | max(0.01x, x) | 解决死亡ReLU | 深层网络 |
 | **Softmax** | e^xi/Σe^xj | 概率分布 | 多分类输出 |
 
-**可视化**：
-
-```python
-import numpy as np
-import matplotlib.pyplot as plt
-
-x = np.linspace(-5, 5, 100)
-
-relu = np.maximum(0, x)
-sigmoid = 1 / (1 + np.exp(-x))
-
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))
-ax1.plot(x, relu)
-ax1.set_title('ReLU')
-ax1.grid(True)
-
-ax2.plot(x, sigmoid)
-ax2.set_title('Sigmoid')
-ax2.grid(True)
-
-plt.show()
-```
-
 ---
 
-### 4. 损失函数
+### 为什么深度学习能自动学习特征？
 
-**作用**：衡量预测值与真实值的差距
+**类比**：
 
-**常用损失函数**：
+| 传统机器学习 | 深度学习 |
+|-------------|---------|
+| 手工告诉计算机："看颜色、形状、纹理" | 计算机自己发现："哦，猫有耳朵、胡须、毛茸茸的" |
 
-| 任务 | 损失函数 | 说明 |
-|------|---------|------|
-| **回归** | MSE | 均方误差 |
-| **二分类** | BCE | 二元交叉熵 |
-| **多分类** | CE | 交叉熵 |
+**层级特征学习**：
 
-**代码示例**：
-
-```python
-import torch.nn.functional as F
-
-# 预测和真实值
-predictions = torch.tensor([[0.2, 0.8], [0.9, 0.1]])
-targets = torch.tensor([[0, 1], [1, 0]])
-
-# 交叉熵损失
-loss = F.cross_entropy(predictions, targets.argmax(dim=1))
-print(f"交叉熵损失: {loss.item():.4f}")
-
-# MSE 损失（回归）
-pred_values = torch.tensor([2.5, 3.7])
-true_values = torch.tensor([2.8, 4.0])
-mse_loss = F.mse_loss(pred_values, true_values)
-print(f"MSE 损失: {mse_loss.item():.4f}")
 ```
-
----
-
-### 5. 优化器
-
-**作用**：更新网络参数，最小化损失
-
-**常用优化器**：
-
-| 优化器 | 特点 | 适用场景 |
-|--------|------|---------|
-| **SGD** | 简单、稳定 | 基础模型 |
-| **Momentum** | 加速收敛 | 深层网络 |
-| **Adam** | 自适应学习率 | **最常用** |
-| **AdamW** | Adam + 权重衰减 | 大规模模型 |
-
-**代码示例**：
-
-```python
-import torch.optim as optim
-
-# 模型
-model = MLP(input_size=10, hidden_size=20, output_size=2)
-
-# 优化器
-optimizer = optim.Adam(model.parameters(), lr=0.001)
-
-# 训练循环
-for epoch in range(10):
-    # 前向传播
-    x = torch.randn(32, 10)
-    y = torch.randint(0, 2, (32,))
-    output = model(x)
-    loss = F.cross_entropy(output, y)
-
-    # 反向传播
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
-
-    print(f"Epoch {epoch}, Loss: {loss.item():.4f}")
-```
-
----
-
-### 6. 卷积神经网络（CNN）
-
-**用途**：图像处理、计算机视觉
-
-**核心组件**：
-
-| 组件 | 作用 | 参数 |
-|------|------|------|
-| **卷积层** | 提取特征 | kernel_size, stride, padding |
-| **池化层** | 降采样 | pool_size, stride |
-| **全连接层** | 分类 | - |
-
-**代码示例**：
-
-```python
-class CNN(nn.Module):
-    def __init__(self, num_classes=10):
-        super(CNN, self).__init__()
-        self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.fc = nn.Linear(64 * 8 * 8, num_classes)
-
-    def forward(self, x):
-        # 3x32x32 → 32x16x16
-        x = self.pool(torch.relu(self.conv1(x)))
-        # 32x16x16 → 64x8x8
-        x = self.pool(torch.relu(self.conv2(x)))
-        x = x.view(x.size(0), -1)
-        x = self.fc(x)
-        return x
-
-model = CNN()
-print(model)
-```
-
----
-
-### 7. 循环神经网络（RNN）
-
-**用途**：序列数据处理（文本、语音、时间序列）
-
-**基础 RNN**：
-
-```python
-class RNN(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
-        super(RNN, self).__init__()
-        self.hidden_size = hidden_size
-        self.rnn = nn.RNN(input_size, hidden_size, batch_first=True)
-        self.fc = nn.Linear(hidden_size, output_size)
-
-    def forward(self, x):
-        # x: (batch, seq_len, input_size)
-        out, hidden = self.rnn(x)
-        # 使用最后一个时间步的输出
-        out = self.fc(out[:, -1, :])
-        return out
-
-model = RNN(input_size=10, hidden_size=20, output_size=2)
-```
-
-**LSTM（长短期记忆网络）**：解决长期依赖问题
-
-```python
-class LSTM(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
-        super(LSTM, self).__init__()
-        self.hidden_size = hidden_size
-        self.lstm = nn.LSTM(input_size, hidden_size, batch_first=True)
-        self.fc = nn.Linear(hidden_size, output_size)
-
-    def forward(self, x):
-        out, (hidden, cell) = self.lstm(x)
-        out = self.fc(out[:, -1, :])
-        return out
-```
-
----
-
-### 8. 注意力机制
-
-**作用**：让模型关注重要部分
-
-**Self-Attention**：
-
-```python
-import torch
-import torch.nn.functional as F
-
-def self_attention(query, key, value):
-    # query, key, value: (batch, seq_len, d_model)
-    # 计算注意力分数
-    scores = torch.matmul(query, key.transpose(-2, -1))
-    scores = scores / np.sqrt(key.size(-1))
-
-    # Softmax
-    attention_weights = F.softmax(scores, dim=-1)
-
-    # 加权求和
-    output = torch.matmul(attention_weights, value)
-    return output
-
-# 使用
-batch_size = 4
-seq_len = 10
-d_model = 64
-
-query = torch.randn(batch_size, seq_len, d_model)
-key = torch.randn(batch_size, seq_len, d_model)
-value = torch.randn(batch_size, seq_len, d_model)
-
-output = self_attention(query, key, value)
-print(f"输出形状: {output.shape}")
-```
-
----
-
-## 💻 第二部分：实战练习（15分钟）
-
----
-
-### 练习1：图像分类（MNIST）
-
-```python
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torchvision import datasets, transforms
-
-# 数据加载
-transform = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.5,), (0.5,))
-])
-
-train_dataset = datasets.MNIST('./data', train=True,
-                              download=True, transform=transform)
-train_loader = torch.utils.data.DataLoader(train_dataset,
-                                          batch_size=64,
-                                          shuffle=True)
-
-# 模型
-class SimpleCNN(nn.Module):
-    def __init__(self):
-        super(SimpleCNN, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, kernel_size=3)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3)
-        self.pool = nn.MaxPool2d(2)
-        self.fc = nn.Linear(64 * 5 * 5, 10)
-
-    def forward(self, x):
-        x = self.pool(torch.relu(self.conv1(x)))
-        x = self.pool(torch.relu(self.conv2(x)))
-        x = x.view(x.size(0), -1)
-        x = self.fc(x)
-        return x
-
-# 训练
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = SimpleCNN().to(device)
-optimizer = optim.Adam(model.parameters())
-criterion = nn.CrossEntropyLoss()
-
-for epoch in range(3):
-    model.train()
-    for batch_idx, (data, target) in enumerate(train_loader):
-        data, target = data.to(device), target.to(device)
-
-        optimizer.zero_grad()
-        output = model(data)
-        loss = criterion(output, target)
-        loss.backward()
-        optimizer.step()
-
-        if batch_idx % 100 == 0:
-            print(f"Epoch {epoch}, Batch {batch_idx}, Loss: {loss.item():.4f}")
-```
-
----
-
-### 练习2：文本分类（情感分析）
-
-```python
-import torch
-import torch.nn as nn
-from torchtext.vocab import build_vocab_from_iterator
-from torchtext.data.utils import get_tokenizer
-
-# 简化的文本分类模型
-class TextClassifier(nn.Module):
-    def __init__(self, vocab_size, embed_dim, hidden_dim, num_classes):
-        super(TextClassifier, self).__init__()
-        self.embedding = nn.Embedding(vocab_size, embed_dim)
-        self.lstm = nn.LSTM(embed_dim, hidden_dim, batch_first=True)
-        self.fc = nn.Linear(hidden_dim, num_classes)
-
-    def forward(self, x):
-        embedded = self.embedding(x)
-        output, (hidden, _) = self.lstm(embedded)
-        output = self.fc(hidden[-1])
-        return output
-
-# 参数
-vocab_size = 10000
-embed_dim = 100
-hidden_dim = 128
-num_classes = 2
-
-model = TextClassifier(vocab_size, embed_dim, hidden_dim, num_classes)
-print(model)
+输入层：原始像素
+    ↓
+第1层：边缘、线条
+    ↓
+第2层：形状、角落
+    ↓
+第3层：物体部件（眼睛、鼻子）
+    ↓
+第4层：完整物体（猫、狗）
 ```
 
 ---
 
 ## ✅ 今天你学到了什么
 
-| 知识点 | 掌握程度 |
-|--------|---------|
-| 深度学习 vs 传统机器学习 | 🎯 已理解 |
-| 感知机和 MLP | 🎯 已掌握 |
-| 激活函数 | 🎯 已掌握 |
-| 损失函数 | 🎯 已掌握 |
-| 优化器 | 🎯 已掌握 |
-| CNN | 🎯 已理解 |
-| RNN 和 LSTM | 🎯 已理解 |
-| 注意力机制 | 🎯 已了解 |
+| 部分 | 知识点 | 掌握程度 |
+|------|--------|---------|
+| OpenAI API | API 密钥获取 | 🎯 已了解 |
+| | SDK 安装和初始化 | 🎯 已掌握 |
+| | 基础调用 | 🎯 已掌握 |
+| | 参数详解 | 🎯 已理解 |
+| | Temperature 使用 | 🎯 已掌握 |
+| | 实战案例 | 🎯 已掌握 |
+| | 错误处理 | 🎯 已了解 |
+| 深度学习 | 深度学习定义 | 🎯 已理解 |
+| | 神经元结构 | 🎯 已理解 |
+| | 激活函数 | 🎯 已了解 |
+| | 特征学习 | 🎯 已理解 |
 
 ---
 
 ## 📝 今天的作业
 
-1. ✅ 运行 MNIST 图像分类示例
-2. ✅ 尝试不同的激活函数
-3. ✅ 比较不同优化器的效果
+1. ✅ 注册 OpenAI 账号，获取 API 密钥
+2. ✅ 尝试调用 API，完成一次简单对话
+3. ✅ 编写一个"代码审查"或"文档生成"的实用函数
 
 ---
 
-## 🚀 本周学习进度
+## 🚀 明天预告
 
-| 天数 | 日期 | 主题 | 状态 |
-|------|------|------|------|
-| 第1天 | 2026-03-24 | 机器学习基础 | ✅ |
-| 第2天 | 2026-03-25 | 深度学习 | ✅ |
-| 第3天 | 2026-03-26 | NLP | 📅 |
-| 第4天 | 2026-03-27 | 计算机视觉 | ⏳ |
-| 第5天 | 2026-03-28 | 大语言模型 | ⏳ |
-| 第6天 | 2026-03-29 | AI工程化 | ⏳ |
-| 第7天 | 2026-03-30 | 综合面试题 | ⏳ |
+| 时间 | 主题 |
+|------|------|
+| 🕐 20分钟 | RAG 检索增强生成 |
+| 🕐 10分钟 | NLP 基础 |
 
 ---
 
-**学习进度**：📊 第2天/第2周
+**学习进度**：📊 第2天/第3周
 
 ---
 

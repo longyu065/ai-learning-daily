@@ -1,6 +1,6 @@
 # AI 知识学习日报
 
-> 每天学习时间：30分钟 | 学习主题：机器学习基础 | 推送时间：每天 08:30 (UTC)
+> 每天学习时间：30分钟 | 模式：20分钟大模型应用 + 10分钟机器学习基础 | 推送时间：每天 08:30 (UTC)
 
 ---
 
@@ -8,395 +8,356 @@
 
 ---
 
-### 🎯 今日主题：机器学习基础（第2周回顾）
+### 🎯 今日学习目标
+
+| 部分 | 时间 | 主题 |
+|------|------|------|
+| 🕐 20分钟 | **大模型应用** | Prompt Engineering（提示工程） |
+| 🕐 10分钟 | **机器学习基础** | 机器学习核心概念 |
 
 ---
 
-## 📖 第一部分：机器学习核心概念（15分钟）
+## 📖 第一部分：20分钟 - Prompt Engineering
 
 ---
 
-### 1. 机器学习三要素
+### 什么是 Prompt Engineering？
 
-**机器学习 = 数据 + 算法 + 算力**
+**Prompt Engineering = 提示工程**
+
+通过精心设计提示词（Prompt），让大模型输出更准确、更有用的内容。
+
+---
+
+### 1. Prompt 的基本原则
+
+#### ✅ 好的 Prompt 应该包含：
 
 | 要素 | 说明 | 示例 |
 |------|------|------|
-| **数据** | 训练和测试样本 | 图片、文本、表格数据 |
-| **算法** | 学习规律的方法 | 决策树、神经网络 |
-| **算力** | 计算能力 | GPU、TPU、CPU |
+| **角色设定** | 告诉 AI 它是谁 | "你是一位资深 Java 开发者" |
+| **任务描述** | 清晰说明要做什么 | "请帮我优化这段代码" |
+| **输入内容** | 提供具体素材 | "以下是需要优化的代码：" |
+| **输出格式** | 指定期望格式 | "请以表格形式输出" |
+| **示例** | 提供参考示例 | "例如：..." |
+
+---
+
+#### ❌ 避免的问题：
+
+| 问题 | 示例 | 改进 |
+|------|------|------|
+| **太模糊** | "帮我写个函数" | "帮我写一个冒泡排序函数" |
+| **缺少上下文** | "这段代码有问题吗？" | "以下 Java 代码在处理大数据时效率低，请分析原因并优化" |
+| **格式不明确** | "给我一些建议" | "请给出 5 条具体的代码优化建议，每条包含：问题、原因、解决方案" |
+
+---
+
+### 2. 常用 Prompt 模板
+
+#### 📝 代码优化模板
+
+```python
+prompt = """
+你是一位资深的 {语言} 开发者，专注于代码质量和性能优化。
+
+{待优化代码}
+
+请分析上述代码，并给出优化建议：
+
+输出格式：
+## 问题分析
+[列出代码存在的问题]
+
+## 优化建议
+1. **问题名称**
+   - 问题描述：...
+   - 优化方案：...
+   - 优化后代码：...
+
+2. **问题名称**
+   ...
+"""
+
+# 使用示例
+prompt = prompt.format(
+    language="Java",
+    待优化代码="""
+public List<User> getUsersByIds(List<Long> ids) {
+    List<User> result = new ArrayList<>();
+    for (Long id : ids) {
+        User user = userRepository.findById(id).orElse(null);
+        if (user != null) {
+            result.add(user);
+        }
+    }
+    return result;
+}
+"""
+)
+```
+
+---
+
+#### 🎓 知识讲解模板
+
+```python
+prompt = """
+你是一位 {领域} 的资深专家，擅长将复杂概念讲解得通俗易懂。
+
+请讲解：{主题}
+
+要求：
+1. 用生活化的比喻帮助理解
+2. 避免专业术语堆砌，必要的术语需要解释
+3. 提供 1-2 个实际应用场景
+4. 最后给出 3 个相关的面试题
+
+输出格式：
+## 📖 什么是{主题}？
+[定义和比喻]
+
+## 💡 实际应用场景
+1. ...
+2. ...
+
+## 🎯 面试题
+1. ...
+2. ...
+3. ...
+"""
+
+# 使用示例
+prompt = prompt.format(
+    领域="机器学习",
+    主题="梯度下降"
+)
+```
+
+---
+
+### 3. 实战练习：编写高效 Prompt
+
+#### 🚀 练习1：代码审查
+
+**任务**：编写一个 Prompt，让 AI 帮你审查 Java 代码的安全性
+
+```python
+prompt = """
+你是一位 Java 安全专家，专注于识别代码中的安全漏洞。
+
+请审查以下代码，重点关注：
+1. SQL 注入风险
+2. XSS 攻击风险
+3. 密码安全问题
+4. 输入验证问题
+5. 权限控制问题
+
+{代码}
+
+输出格式：
+## 🔒 安全问题清单
+
+### 严重问题（必须修复）
+1. **问题名称**：{问题描述}
+   - 位置：{代码行号或方法}
+   - 风险：{潜在影响}
+   - 修复方案：{具体修复代码}
+
+### 中等问题（建议修复）
+...
+
+### 轻微问题（可选优化）
+...
+
+## ✅ 安全建议
+[针对整体架构的安全建议]
+"""
+
+# 你的代码
+code = """
+@GetMapping("/users/{id}")
+public User getUser(@PathVariable Long id) {
+    String query = "SELECT * FROM users WHERE id = " + id;
+    return jdbcTemplate.queryForObject(query, User.class);
+}
+"""
+
+result = send_to_llm(prompt.format(代码=code))
+```
+
+---
+
+#### 🚀 练习2：生成单元测试
+
+```python
+prompt = """
+你是一位测试驱动开发（TDD）的倡导者，擅长编写高质量单元测试。
+
+请为以下 {语言} 方法编写完整的单元测试：
+
+{代码}
+
+要求：
+1. 使用 JUnit 5 / PyTest 框架
+2. 覆盖所有边界条件
+3. 包含正常情况和异常情况
+4. 测试用例命名清晰（given_when_then 风格）
+
+输出格式：
+```{语言}
+// 完整的测试代码
+```
+"""
+
+# 使用示例
+prompt = prompt.format(
+    语言="Java",
+    代码="""
+public class Calculator {
+    public int divide(int a, int b) {
+        if (b == 0) {
+            throw new IllegalArgumentException("除数不能为0");
+        }
+        return a / b;
+    }
+}
+"""
+)
+```
+
+---
+
+### 4. 进阶技巧：Chain of Thought（思维链）
+
+**问题**：AI 在复杂任务上容易出错
+
+**解决方案**：让 AI 分步骤思考
+
+```python
+# ❌ 直接提问
+prompt = "计算 23 * 45 + 67 / 3"
+
+# ✅ 思维链
+prompt = """
+计算以下表达式：23 * 45 + 67 / 3
+
+请分步骤计算：
+步骤1：计算 23 * 45
+步骤2：计算 67 / 3
+步骤3：将步骤1和步骤2的结果相加
+步骤4：给出最终答案
+"""
+
+# 输出：
+"""
+步骤1：23 * 45 = 1035
+步骤2：67 / 3 ≈ 22.333
+步骤3：1035 + 22.333 = 1057.333
+步骤4：最终答案 ≈ 1057.333
+"""
+```
+
+---
+
+## 📖 第二部分：10分钟 - 机器学习基础
+
+---
+
+### 机器学习核心概念（5分钟）
+
+#### 1. 什么是机器学习？
+
+**定义**：让计算机从数据中学习规律，而不是通过硬编码规则
+
+**简单理解**：
+```
+传统编程：规则 + 数据 = 答案
+机器学习：答案 + 数据 = 规则
+```
 
 **类比**：
-- 数据：学生的教材
-- 算法：学习方法
-- 算力：学生的学习时间
+- 教小孩子认字：
+  - 传统方法：告诉孩子"横竖撇捺"的规律
+  - 机器学习方法：给孩子看很多字，让他自己总结规律
 
 ---
 
-### 2. 监督学习详解
+#### 2. 机器学习三大要素
 
-**定义**：使用有标签的数据训练模型
-
-**任务类型**：
-
-| 任务 | 目标 | 典型算法 |
-|------|------|---------|
-| **分类** | 预测离散类别 | 逻辑回归、SVM、随机森林 |
-| **回归** | 预测连续值 | 线性回归、决策树 |
-| **序列标注** | 预测标签序列 | CRF、HMM |
-
-**分类任务示例**：
-
-```python
-from sklearn.datasets import load_iris
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-
-# 加载数据（鸢尾花分类）
-data = load_iris()
-X = data.data  # 特征：花萼长度、宽度等
-y = data.target  # 标签：3种鸢尾花
-
-# 拆分数据
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
-
-# 训练模型
-model = RandomForestClassifier()
-model.fit(X_train, y_train)
-
-# 评估
-accuracy = model.score(X_test, y_test)
-print(f"准确率: {accuracy:.2%}")
-# 输出：准确率: 96.67%
-```
+| 要素 | 说明 | 生活中的类比 |
+|------|------|-------------|
+| **数据** | 训练素材 | 学生的教材和练习题 |
+| **算法** | 学习方法 | 学生的学习方法（背诵、理解、练习） |
+| **算力** | 计算能力 | 学生的学习时间和精力 |
 
 ---
 
-### 3. 无监督学习详解
+#### 3. 机器学习的主要类型
 
-**定义**：使用无标签的数据发现规律
+| 类型 | 标签 | 目标 | 典型应用 |
+|------|------|------|---------|
+| **监督学习** | ✅ 有 | 预测标签 | 图像分类、垃圾邮件检测 |
+| **无监督学习** | ❌ 无 | 发现规律 | 用户分群、异常检测 |
+| **强化学习** | ⭐ 奖励 | 最大化奖励 | 游戏AI、机器人控制 |
 
-**任务类型**：
-
-| 任务 | 目标 | 典型算法 |
-|------|------|---------|
-| **聚类** | 将相似数据分组 | K-Means、DBSCAN |
-| **降维** | 减少特征数量 | PCA、t-SNE |
-| **关联规则** | 发现数据关联 | Apriori、FP-Growth |
-
-**聚类任务示例**：
-
-```python
-from sklearn.cluster import KMeans
-import matplotlib.pyplot as plt
-
-# 生成数据
-import numpy as np
-np.random.seed(42)
-group1 = np.random.randn(50, 2) + [2, 2]
-group2 = np.random.randn(50, 2) + [-2, -2]
-X = np.vstack([group1, group2])
-
-# K-Means 聚类
-model = KMeans(n_clusters=2, random_state=42)
-labels = model.fit_predict(X)
-
-# 可视化
-plt.scatter(X[:, 0], X[:, 1], c=labels, cmap='viridis')
-plt.scatter(model.cluster_centers_[:, 0],
-           model.cluster_centers_[:, 1],
-           c='red', marker='x', s=200, label='中心点')
-plt.legend()
-plt.title("K-Means 聚类")
-plt.show()
-```
+**生活类比**：
+- **监督学习**：老师批改作业，告诉你对错
+- **无监督学习**：自己整理房间，把相似的东西放一起
+- **强化学习**：玩游戏时，根据得分调整策略
 
 ---
 
-### 4. 强化学习简介
+### 实战练习（5分钟）
 
-**定义**：通过与环境交互，学习最优策略
+#### 📊 练习：识别机器学习类型
 
-**核心概念**：
+判断以下任务属于哪种机器学习类型：
 
-| 概念 | 说明 |
-|------|------|
-| **Agent** | 智能体（学习者） |
-| **Environment** | 环境 |
-| **State** | 状态 |
-| **Action** | 动作 |
-| **Reward** | 奖励 |
-
-**应用场景**：
-- 游戏 AI（AlphaGo）
-- 机器人控制
-- 自动驾驶
-- 推荐系统
-
-**简单示例**：
-
-```python
-import random
-
-# 简单的强化学习环境
-class SimpleEnv:
-    def __init__(self):
-        self.state = 0
-        self.goal = 5
-
-    def reset(self):
-        self.state = 0
-        return self.state
-
-    def step(self, action):
-        # action: 0=左移, 1=右移
-        if action == 1:
-            self.state += 1
-        elif action == 0:
-            self.state -= 1
-
-        # 奖励
-        if self.state == self.goal:
-            reward = 1
-            done = True
-        elif self.state < 0 or self.state > 10:
-            reward = -1
-            done = True
-        else:
-            reward = 0
-            done = False
-
-        return self.state, reward, done
-
-# 随机策略
-env = SimpleEnv()
-state = env.reset()
-total_reward = 0
-
-for _ in range(100):
-    action = random.choice([0, 1])  # 随机动作
-    state, reward, done = env.step(action)
-    total_reward += reward
-    if done:
-        state = env.reset()
-
-print(f"总奖励: {total_reward}")
-```
-
----
-
-### 5. 评估指标
-
-#### 分类指标
-
-| 指标 | 公式 | 说明 |
-|------|------|------|
-| **准确率** | (TP+TN)/(TP+TN+FP+FN) | 整体正确率 |
-| **精确率** | TP/(TP+FP) | 预测为正的准确性 |
-| **召回率** | TP/(TP+FN) | 实际为正的覆盖率 |
-| **F1** | 2×精确率×召回率/(精确率+召回率) | 平衡精确率和召回率 |
-
-```python
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-
-y_true = [1, 1, 0, 1, 0]
-y_pred = [1, 1, 1, 0, 0]
-
-print(f"准确率: {accuracy_score(y_true, y_pred):.2%}")
-print(f"精确率: {precision_score(y_true, y_pred):.2%}")
-print(f"召回率: {recall_score(y_true, y_pred):.2%}")
-print(f"F1: {f1_score(y_true, y_pred):.2%}")
-```
-
----
-
-### 6. 交叉验证
-
-**目的**：更准确地评估模型性能
-
-**K-Fold 交叉验证**：
-
-```python
-from sklearn.model_selection import cross_val_score
-from sklearn.ensemble import RandomForestClassifier
-
-# 加载数据
-data = load_iris()
-X, y = data.data, data.target
-
-# 模型
-model = RandomForestClassifier()
-
-# 5折交叉验证
-scores = cross_val_score(model, X, y, cv=5)
-
-print(f"每折准确率: {scores}")
-print(f"平均准确率: {scores.mean():.2%}")
-print(f"标准差: {scores.std():.2%}")
-```
-
----
-
-## 💻 第二部分：实战练习（15分钟）
-
----
-
-### 练习1：手写数字识别
-
-```python
-from sklearn.datasets import load_digits
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report
-
-# 加载数据
-digits = load_digits()
-X = digits.data  # 64个像素特征
-y = digits.target  # 0-9的数字
-
-print(f"数据形状: {X.shape}")
-print(f"示例图片:")
-print(digits.images[0])
-
-# 拆分数据
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42
-)
-
-# 训练模型
-model = RandomForestClassifier(n_estimators=100, random_state=42)
-model.fit(X_train, y_train)
-
-# 预测
-y_pred = model.predict(X_test)
-
-# 评估
-print("\n分类报告:")
-print(classification_report(y_test, y_pred))
-```
-
----
-
-### 练习2：客户分群
-
-```python
-from sklearn.cluster import KMeans
-from sklearn.preprocessing import StandardScaler
-import numpy as np
-
-# 模拟客户数据
-np.random.seed(42)
-n_customers = 300
-spending = np.random.normal(1000, 300, n_customers)  # 消费金额
-frequency = np.random.poisson(10, n_customers)       # 消费频率
-
-X = np.column_stack([spending, frequency])
-
-# 标准化
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
-
-# K-Means 聚类
-model = KMeans(n_clusters=3, random_state=42)
-labels = model.fit_predict(X_scaled)
-
-# 分析结果
-import pandas as pd
-df = pd.DataFrame({
-    'spending': spending,
-    'frequency': frequency,
-    'cluster': labels
-})
-
-print("\n客户群体分析:")
-print(df.groupby('cluster').agg({
-    'spending': ['mean', 'std'],
-    'frequency': ['mean', 'std'],
-    'cluster': 'count'
-}))
-```
-
----
-
-### 练习3：房价预测
-
-```python
-from sklearn.datasets import fetch_california_housing
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_squared_error, r2_score
-
-# 加载数据
-data = fetch_california_housing()
-X = data.data
-y = data.target
-
-print(f"特征名称: {data.feature_names}")
-
-# 拆分数据
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42
-)
-
-# 训练模型
-model = RandomForestRegressor(n_estimators=100, random_state=42)
-model.fit(X_train, y_train)
-
-# 预测
-y_pred = model.predict(X_test)
-
-# 评估
-mse = mean_squared_error(y_test, y_pred)
-r2 = r2_score(y_test, y_pred)
-
-print(f"\n均方误差 (MSE): {mse:.4f}")
-print(f"R² 分数: {r2:.4f}")
-
-# 特征重要性
-importance = model.feature_importances_
-print("\n特征重要性:")
-for name, imp in zip(data.feature_names, importance):
-    print(f"{name:20s}: {imp:.4f}")
-```
+| 任务 | 你的答案 | 答案 |
+|------|----------|------|
+| 根据邮件内容判断是否为垃圾邮件 | | 监督学习 |
+| 根据用户购买记录推荐商品 | | 监督学习/无监督学习 |
+| AlphaGo 围棋 AI | | 强化学习 |
+| 对新闻进行自动分类 | | 监督学习 |
+| 发现异常交易（信用卡欺诈检测） | | 无监督学习 |
 
 ---
 
 ## ✅ 今天你学到了什么
 
-| 知识点 | 掌握程度 |
-|--------|---------|
-| 机器学习三要素 | 🎯 已理解 |
-| 监督学习任务 | 🎯 已掌握 |
-| 无监督学习任务 | 🎯 已掌握 |
-| 强化学习基础 | 🎯 已了解 |
-| 评估指标 | 🎯 已掌握 |
-| 交叉验证 | 🎯 已掌握 |
+| 部分 | 知识点 | 掌握程度 |
+|------|--------|---------|
+| Prompt Engineering | 角色设定 | 🎯 已掌握 |
+| | 任务描述 | 🎯 已掌握 |
+| | 输出格式 | 🎯 已掌握 |
+| | 代码审查模板 | 🎯 已了解 |
+| | 单元测试生成模板 | 🎯 已了解 |
+| | 思维链技巧 | 🎯 已理解 |
+| 机器学习基础 | 机器学习定义 | 🎯 已理解 |
+| | 三大要素 | 🎯 已掌握 |
+| | 三种类型 | 🎯 已掌握 |
 
 ---
 
 ## 📝 今天的作业
 
-1. ✅ 运行手写数字识别示例
-2. ✅ 尝试不同的 K 值进行聚类
-3. ✅ 比较不同模型的性能
+1. ✅ 尝试用 Prompt Engineering 让 AI 帮你优化一段实际代码
+2. ✅ 编写一个"代码解释器"的 Prompt
+3. ✅ 回顾今天学的机器学习概念，用自己的话解释
 
 ---
 
-## 🚀 本周学习计划
+## 🚀 明天预告
 
-| 天数 | 日期 | 主题 |
-|------|------|------|
-| 第1天 | 2026-03-24 | 机器学习基础 |
-| 第2天 | 2026-03-25 | 深度学习 |
-| 第3天 | 2026-03-26 | NLP |
-| 第4天 | 2026-03-27 | 计算机视觉 |
-| 第5天 | 2026-03-28 | 大语言模型 |
-| 第6天 | 2026-03-29 | AI工程化 |
-| 第7天 | 2026-03-30 | 综合面试题 |
+| 时间 | 主题 |
+|------|------|
+| 🕐 20分钟 | OpenAI API 调用 |
+| 🕐 10分钟 | 深度学习基础 |
 
 ---
 
-**学习进度**：📊 第1天/第2周
+**学习进度**：📊 第1天/第3周
 
 ---
 
